@@ -1,0 +1,150 @@
+@import url("https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Google+Sans+Flex:opsz,slnt,wdth,wght,ROND@8..144,-10..0,25..150,400..700,0..100&display=swap");
+
+@import "tailwindcss";
+
+/* -------------------------------------------------------------------------- */
+/* GLOBAL RESET                                                               */
+/* -------------------------------------------------------------------------- */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  width: 100%;
+  min-height: 100%;
+  margin: 0;
+  padding: 0;
+  scroll-behavior: auto;
+  overflow-x: clip;
+}
+
+body {
+  width: 100%;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+  overflow-x: clip;
+  background: #000;
+  color: #fff;
+  font-family: "Google Sans Flex", sans-serif;
+}
+
+#root {
+  width: 100%;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* -------------------------------------------------------------------------- */
+/* MEDIA                                                                      */
+/* -------------------------------------------------------------------------- */
+
+img,
+video,
+canvas,
+svg {
+  max-width: 100%;
+}
+
+img {
+  vertical-align: middle;
+}
+
+/* -------------------------------------------------------------------------- */
+/* LINKS                                                                      */
+/* -------------------------------------------------------------------------- */
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* -------------------------------------------------------------------------- */
+/* BUTTONS                                                                    */
+/* -------------------------------------------------------------------------- */
+
+button {
+  font: inherit;
+}
+
+/* -------------------------------------------------------------------------- */
+/* SCROLLBAR                                                                  */
+/* -------------------------------------------------------------------------- */
+
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #080808;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #8a652d;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #d9aa55;
+}
+
+/* -------------------------------------------------------------------------- */
+/* TEXT SELECTION                                                             */
+/* -------------------------------------------------------------------------- */
+
+::selection {
+  background: rgba(217, 170, 85, 0.3);
+  color: #fff;
+}
+
+/* -------------------------------------------------------------------------- */
+/* MESH BACKGROUND ANIMATION                                                  */
+/* -------------------------------------------------------------------------- */
+
+@keyframes mesh-pulse {
+  0%,
+  100% {
+    opacity: 0.45;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.8;
+    transform: scale(1.03);
+  }
+}
+
+.animate-mesh-pulse {
+  animation: mesh-pulse 14s ease-in-out infinite;
+}
+
+/* -------------------------------------------------------------------------- */
+/* ACCESSIBILITY                                                              */
+/* -------------------------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+/* MOBILE                                                                     */
+/* -------------------------------------------------------------------------- */
+
+@media (max-width: 640px) {
+  body {
+    min-height: 100vh;
+  }
+}
