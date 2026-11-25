@@ -1,67 +1,13 @@
 import { motion, useReducedMotion } from "framer-motion";
 import { Link } from "react-router-dom";
+import { createPortal } from "react-dom";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { apiRequest, getMediaUrl, getOptimizedImageUrl } from "../config/api";
 
-import ventureLogo1 from "../assets/ventures/anytimefitnesslogo-Dtd3ccp2.jpg";
-import ventureLogo2 from "../assets/ventures/BI-logo.webp";
-import ventureLogo3 from "../assets/ventures/Bialogo-Cq0EIyEs.jpg";
-import ventureLogo4 from "../assets/ventures/bielogo-OJpwyBGe.jpg";
-import ventureLogo5 from "../assets/ventures/Brown and Tan Geometric Logo.png";
-import ventureLogo6 from "../assets/ventures/corridorlogo-CDPwac1u.jpg";
-import ventureLogo7 from "../assets/ventures/dietoLogo-203qzA5K.png";
-import ventureLogo8 from "../assets/ventures/download.jpeg";
-import ventureLogo9 from "../assets/ventures/IaRoyalslogo-BcmrNnyF.jpg";
-import ventureLogo10 from "../assets/ventures/IbanHotelslogo-Vh6_YVJr.jpg";
-import ventureLogo11 from "../assets/ventures/ibanValleylogo-mobTSK5H.png";
-import ventureLogo12 from "../assets/ventures/iboraLogo-DRObnKsQ.png";
-import ventureLogo13 from "../assets/ventures/LRlogo-CB9-jFI9.png";
-import ventureLogo14 from "../assets/ventures/medeqologo-DVsVYz0s.png";
-import ventureLogo15 from "../assets/ventures/sapodillaLogo-jivekX_D.jpg";
-import ventureLogo16 from "../assets/ventures/sportiqologo-DEaNsiGN.png";
-import ventureLogo17 from "../assets/ventures/sportiqowellnesslogo-BQR_9W1c.png";
-import ventureLogo18 from "../assets/ventures/SuplementCartLogo-CqH67wkL.jpg";
-import ventureLogo19 from "../assets/ventures/teknourbanlogo-B4AaTFt6.png";
-import ventureLogo20 from "../assets/ventures/urbanlogisticlogo-J8BuYoue.png";
-import ventureLogo21 from "../assets/ventures/urbanlogo-jElgesXG.png";
-
-const ventures = [
-  {
-    logo: ventureLogo1,
-    url: "https://www.google.com/search?q=Anytime+Fitness",
-  },
-  { logo: ventureLogo2, url: "https://beingibanonline.com/" },
-  { logo: ventureLogo3, url: "https://beingibanacademy.com/" },
-  { logo: ventureLogo4, url: "https://beingibanentertainments.com/" },
-  { logo: ventureLogo5, url: "https://beingibandigital.in/" },
-  { logo: ventureLogo6, url: "https://www.instagram.com/corridorbar3/" },
-  { logo: ventureLogo7, url: "https://beingiban.co.in/" },
-  {
-    logo: ventureLogo8,
-    url: "https://www.instagram.com/clublocasaltlakekolkata/",
-  },
-  { logo: ventureLogo9, url: "https://beingiban.co.in/" },
-  { logo: ventureLogo10, url: "https://beingiban.co.in/" },
-  { logo: ventureLogo11, url: "https://beingiban.co.in/" },
-  { logo: ventureLogo12, url: "https://beingiban.co.in/" },
-  { logo: ventureLogo13, url: "https://beingiban.co.in/" },
-  { logo: ventureLogo14, url: "https://beingiban.co.in/" },
-  { logo: ventureLogo15, url: "https://clubsapodilla.co.in/" },
-  { logo: ventureLogo16, url: "https://sportiqofitness.co.in/" },
-  {
-    logo: ventureLogo17,
-    url: "https://sportiqofitness.co.in/sportiqo-wellness-therapy",
-  },
-  { logo: ventureLogo18, url: "https://beingiban.co.in/" },
-  { logo: ventureLogo19, url: "https://www.urbanengineering.co.in/" },
-  { logo: ventureLogo20, url: "https://www.urbanengineering.co.in/" },
-  { logo: ventureLogo21, url: "https://www.urbanengineering.co.in/" },
-];
-
 const CORPORATE_API = "/api/portfolio/corporate";
 const CORPORATE_GALLERY_API = "/api/gallery/corporate";
-const COMPANY_ARCHIVES_API = "/api/gallery/company-archives";
+const COMPANY_ARCHIVES_API = "/api/company-archives";
 
 const initialData = {
   hero: {
@@ -175,12 +121,6 @@ function OptimizedImage({
   hover = false,
 }) {
   const [imageStatus, setImageStatus] = useState("loading");
-  const [useOriginal, setUseOriginal] = useState(false);
-
-  useEffect(() => {
-    setImageStatus("loading");
-    setUseOriginal(false);
-  }, [src]);
 
   if (!src) {
     return (
@@ -201,26 +141,11 @@ function OptimizedImage({
   }
 
   const optimizedSrc = getOptimizedImageUrl(originalSrc, mobile ? 640 : 1200);
-
-  const currentSrc = useOriginal || !optimizedSrc ? originalSrc : optimizedSrc;
+  const currentSrc =
+    imageStatus === "error" ? originalSrc : optimizedSrc || originalSrc;
 
   const isLoaded = imageStatus === "loaded";
-  const isFailed = imageStatus === "error";
-
-  const handleLoad = () => {
-    setImageStatus("loaded");
-  };
-
-  const handleError = () => {
-    if (!useOriginal && currentSrc !== originalSrc) {
-      setUseOriginal(true);
-      setImageStatus("loading");
-      return;
-    }
-
-    setImageStatus("error");
-    console.error("Failed to load image:", originalSrc);
-  };
+  const isImageVisible = isLoaded || imageStatus === "error";
 
   const imageClassName = `
     relative
@@ -231,7 +156,7 @@ function OptimizedImage({
     object-cover
     transition-opacity
     duration-500
-    ${isLoaded || isFailed ? "opacity-100" : "opacity-0"}
+    ${isImageVisible ? "opacity-100" : "opacity-0"}
     ${className}
   `;
 
@@ -245,46 +170,29 @@ function OptimizedImage({
     fetchPriority,
     decoding: "async",
     draggable: false,
-    onLoad: handleLoad,
-    onError: handleError,
+    onLoad: () => setImageStatus("loaded"),
+    onError: () => setImageStatus("error"),
     className: imageClassName,
   };
 
   return (
     <div className="relative h-full w-full overflow-hidden">
-      {!isLoaded && !isFailed && (
+      {!isImageVisible && (
         <div
           aria-hidden="true"
           className="absolute inset-0 animate-pulse bg-white/[0.045]"
         />
       )}
 
-      {isFailed ? (
-        <div
-          role="img"
-          aria-label={`${alt} unavailable`}
-          className="
-            flex
-            h-full
-            w-full
-            items-center
-            justify-center
-            bg-white/[0.025]
-            text-xs
-            text-white/35
-          "
-        >
-          Image unavailable
-        </div>
-      ) : mobile ? (
+      {mobile ? (
         <img {...imageProps} />
       ) : (
         <motion.img
           {...imageProps}
           initial={false}
           animate={{
-            opacity: isLoaded ? 1 : 0,
-            scale: isLoaded ? 1 : 1.025,
+            opacity: isImageVisible ? 1 : 0,
+            scale: isImageVisible ? 1 : 1.025,
           }}
           transition={{
             duration: 0.6,
@@ -349,6 +257,8 @@ function Corporate() {
   const [isMobile, setIsMobile] = useState(false);
   const [portfolioData, setPortfolioData] = useState(initialData);
   const [portfolioLoading, setPortfolioLoading] = useState(true);
+  const [lightboxImage, setLightboxImage] = useState(null);
+  const [ventures, setVentures] = useState([]);
 
   const galleryRef = useRef(null);
 
@@ -359,6 +269,26 @@ function Corporate() {
   const [archiveImages, setArchiveImages] = useState([]);
   const [canScrollArchiveLeft, setCanScrollArchiveLeft] = useState(false);
   const [canScrollArchiveRight, setCanScrollArchiveRight] = useState(false);
+
+  useEffect(() => {
+    if (!lightboxImage) return;
+
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") {
+        setLightboxImage(null);
+      }
+    };
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [lightboxImage]);
 
   /* =======================================================
      MOBILE DETECTION
@@ -449,6 +379,34 @@ function Corporate() {
   }, []);
 
   /* =======================================================
+     LOAD VENTURES
+  ======================================================= */
+
+  useEffect(() => {
+    let mounted = true;
+
+    const loadVentures = async () => {
+      try {
+        const result = await apiRequest("/api/ventures");
+
+        if (!mounted) {
+          return;
+        }
+
+        setVentures(Array.isArray(result?.ventures) ? result.ventures : []);
+      } catch (error) {
+        console.error("Failed to load ventures:", error);
+      }
+    };
+
+    loadVentures();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  /* =======================================================
      LOAD GALLERY
   ======================================================= */
 
@@ -493,7 +451,7 @@ function Corporate() {
   }, []);
 
   /* =======================================================
-     LOAD COMPANY ARCHIVES SEPARATELY
+   LOAD COMPANY ARCHIVES SEPARATELY
   ======================================================= */
 
   useEffect(() => {
@@ -507,19 +465,39 @@ function Corporate() {
           return;
         }
 
-        const images = Array.isArray(result?.images)
-          ? result.images
-          : Array.isArray(result?.gallery)
-            ? result.gallery
-            : [];
+        const sections = Array.isArray(result?.sections) ? result.sections : [];
 
-        const validImages = images
-          .filter((item) =>
-            Boolean(item?.imageUrl || item?.image || item?.url || item?.src),
-          )
-          .slice(0, 5);
+        // Select the first available image from each section.
+        // Sections without images are excluded.
+        const archiveImages = sections
+          .map((section) => {
+            const images = Array.isArray(section?.images) ? section.images : [];
 
-        setArchiveImages(validImages);
+            const firstImage = images.find((image) =>
+              Boolean(
+                image?.url || image?.imageUrl || image?.image || image?.src,
+              ),
+            );
+
+            if (!firstImage) {
+              return null;
+            }
+
+            return {
+              ...firstImage,
+              url:
+                firstImage.url ||
+                firstImage.imageUrl ||
+                firstImage.image ||
+                firstImage.src,
+              title: section.name || "Company Archive",
+              sectionName: section.name || "Company Archive",
+              sectionId: section._id,
+            };
+          })
+          .filter(Boolean);
+
+        setArchiveImages(archiveImages);
       } catch (error) {
         console.error("Failed to load company archives:", error);
       }
@@ -759,7 +737,6 @@ function Corporate() {
           px-6
           pb-20
           pt-24
-          lg:px-10
           lg:pb-28
           lg:pt-28
         "
@@ -856,31 +833,31 @@ function Corporate() {
               lg:aspect-[5/6]
             "
           >
-            {portfolioLoading && !portfolioData.hero.image ? (
-              <div
-                className="
-                  h-full
-                  w-full
-                  animate-pulse
-                  bg-white/[0.025]
-                "
-              />
-            ) : (
-              <OptimizedImage
-                src={portfolioData.hero.image}
-                alt="Corporate portfolio"
-                width={800}
-                height={1000}
-                sizes="
-                  (max-width: 767px) calc(100vw - 48px),
-                  (max-width: 1023px) 70vw,
-                  55vw
-                "
-                loading="eager"
-                fetchPriority="high"
-                mobile={isMobile}
-                hover={!disableMotion}
-              />
+            {portfolioData.hero.image && (
+              <button
+                type="button"
+                onClick={() =>
+                  setLightboxImage(getMediaUrl(portfolioData.hero.image))
+                }
+                aria-label="View hero image"
+                className="block h-full w-full cursor-pointer border-0 bg-transparent p-0 text-left"
+              >
+                <OptimizedImage
+                  src={portfolioData.hero.image}
+                  alt="Corporate portfolio"
+                  width={800}
+                  height={1000}
+                  sizes="
+                    (max-width: 767px) calc(100vw - 48px),
+                    (max-width: 1023px) 70vw,
+                    55vw
+                  "
+                  loading="eager"
+                  fetchPriority="high"
+                  mobile={isMobile}
+                  hover={!disableMotion}
+                />
+              </button>
             )}
           </div>
         </div>
@@ -895,9 +872,9 @@ function Corporate() {
         className="
           w-full
           px-6
-          py-24
+          py-12
           lg:px-10
-          lg:py-36
+          lg:py-18
         "
       >
         <div className="mx-auto w-full max-w-7xl">
@@ -917,15 +894,14 @@ function Corporate() {
 
             <p
               className="
-                mt-8
-                w-full
-                max-w-none
-                font-display
-                text-[clamp(1.8rem,3.2vw,3.4rem)]
-                leading-[1.15]
-                tracking-[-0.035em]
-                text-white/85
-              "
+              mt-8
+              w-full
+              max-w-none
+              font-display
+              text-[clamp(1.5rem,2.7vw,2.8rem)]
+              leading-[1.5]
+              text-white/85
+            "
             >
               {portfolioData.aboutOne.text}
             </p>
@@ -942,9 +918,9 @@ function Corporate() {
         className="
           relative
           px-6
-          py-28
+          py-14
           lg:px-10
-          lg:py-36
+          lg:py-18
         "
       >
         <div className="mx-auto max-w-7xl">
@@ -1035,12 +1011,22 @@ function Corporate() {
         disableAnimation={disableMotion}
         className="
           px-6
-          py-24
+          py-12
           lg:px-10
-          lg:py-36
+          lg:py-18
         "
       >
         <div className="mx-auto max-w-7xl">
+          <p
+            className="
+                text-[10px]
+                uppercase
+                tracking-[0.35em]
+                text-[#C9974B]
+              "
+          >
+            Corporate
+          </p>
           <div
             className="
               grid
@@ -1055,9 +1041,8 @@ function Corporate() {
                 mt-8
                 max-w-2xl
                 font-display
-                text-[clamp(1.8rem,3.5vw,4rem)]
+                text-[clamp(1.5rem,2.7vw,3.4rem)]
                 leading-[1.1]
-                tracking-[-0.04em]
                 text-white/80
               "
             >
@@ -1070,19 +1055,30 @@ function Corporate() {
                 overflow-hidden
               "
             >
-              <OptimizedImage
-                src={portfolioData.aboutTwo.image}
-                alt="Corporate project"
-                width={800}
-                height={500}
-                sizes="
-                  (max-width: 767px) calc(100vw - 48px),
-                  45vw
-                "
-                loading="lazy"
-                mobile={isMobile}
-                hover={!disableMotion}
-              />
+              {portfolioData.aboutTwo.image && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    setLightboxImage(getMediaUrl(portfolioData.aboutTwo.image))
+                  }
+                  aria-label="View About section image"
+                  className="block h-full w-full cursor-pointer border-0 bg-transparent p-0 text-left"
+                >
+                  <OptimizedImage
+                    src={portfolioData.aboutTwo.image}
+                    alt="Corporate project"
+                    width={800}
+                    height={500}
+                    sizes="
+                      (max-width: 767px) calc(100vw - 48px),
+                      45vw
+                    "
+                    loading="lazy"
+                    mobile={isMobile}
+                    hover={!disableMotion}
+                  />
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -1332,8 +1328,8 @@ function Corporate() {
                         (max-width: 1023px) 240px,
                         280px
                       "
-                      loading={index < 2 ? "eager" : "lazy"}
-                      fetchPriority={index === 0 ? "high" : "auto"}
+                      loading="lazy"
+                      fetchPriority="auto"
                       mobile={isMobile}
                       hover={!disableMotion}
                       className="
@@ -1456,9 +1452,9 @@ function Corporate() {
           border-t
           border-white/10
           px-6
-          py-24
+          py-12
           lg:px-10
-          lg:py-36
+          lg:py-18
         "
       >
         <div className="mx-auto max-w-7xl">
@@ -1505,8 +1501,8 @@ function Corporate() {
               const logo = (
                 <div className="mx-auto flex aspect-square w-full max-w-[150px] items-center justify-center">
                   <img
-                    src={venture.logo}
-                    alt=""
+                    src={getMediaUrl(venture.logo)}
+                    alt={`Venture ${index + 1}`}
                     loading="lazy"
                     decoding="async"
                     draggable="false"
@@ -1525,7 +1521,7 @@ function Corporate() {
 
               return venture.url ? (
                 <a
-                  key={index}
+                  key={venture._id || venture.publicId || index}
                   href={venture.url}
                   target="_blank"
                   rel="noopener noreferrer"
@@ -1544,7 +1540,10 @@ function Corporate() {
                   {logo}
                 </a>
               ) : (
-                <div key={index} className="block w-full">
+                <div
+                  key={venture._id || venture.publicId || index}
+                  className="block w-full"
+                >
                   {logo}
                 </div>
               );
@@ -1756,7 +1755,7 @@ function Corporate() {
                   >
                     <OptimizedImage
                       src={imageUrl}
-                      alt={item?.title || `Company archive ${index + 1}`}
+                      alt={item?.sectionName || `Company archive ${index + 1}`}
                       width={640}
                       height={1024}
                       sizes="
@@ -1764,8 +1763,8 @@ function Corporate() {
                         (max-width: 1023px) 240px,
                         280px
                       "
-                      loading={index < 2 ? "eager" : "lazy"}
-                      fetchPriority={index === 0 ? "high" : "auto"}
+                      loading="lazy"
+                      fetchPriority="auto"
                       mobile={isMobile}
                       hover={!disableMotion}
                       className="aspect-[5/8]"
@@ -1806,9 +1805,9 @@ function Corporate() {
         disableAnimation={disableMotion}
         className="
           px-6
-          py-32
+          py-12
           lg:px-10
-          lg:py-48
+          lg:py-18
         "
       >
         <div className="mx-auto max-w-7xl">
@@ -1867,20 +1866,42 @@ function Corporate() {
               Contact
             </span>
 
-            <p
-              className="
-                text-lg
-                font-light
-                tracking-wide
-                text-[#C9974B]
-                md:text-2xl
-              "
-            >
+            <a href="mailto:contact@ibanbanerjea.com">
               contact@ibanbanerjea.com
-            </p>
+            </a>
           </div>
         </div>
       </Section>
+
+      {/* IMAGE LIGHTBOX */}
+      {lightboxImage &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Image preview"
+            onClick={() => setLightboxImage(null)}
+            className="fixed inset-0 z-[2147483647] flex items-center justify-center bg-black/95 p-4 backdrop-blur-md sm:p-8"
+          >
+            <button
+              type="button"
+              onClick={() => setLightboxImage(null)}
+              aria-label="Close image preview"
+              className="absolute right-5 top-5 z-10 flex h-11 w-11 cursor-pointer items-center justify-center rounded-full border border-white/30 bg-black/60 text-3xl leading-none text-white shadow-lg transition hover:border-[#C9974B] hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C9974B]"
+            >
+              &times;
+            </button>
+
+            <img
+              src={lightboxImage}
+              alt="Expanded corporate portfolio image"
+              onClick={(event) => event.stopPropagation()}
+              className="max-h-[90vh] max-w-[95vw] cursor-default rounded-sm object-contain shadow-2xl"
+            />
+          </div>,
+          document.body,
+        )}
     </motion.main>
   );
 }

@@ -1,6 +1,6 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowLeft, ArrowRight, X } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { ArrowLeft, ArrowRight, ExternalLink, X } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { apiRequest, getMediaUrl, getOptimizedImageUrl } from "../config/api";
 
@@ -13,12 +13,10 @@ const pageVariants = {
     opacity: 0,
     x: "-100%",
   },
-
   animate: {
     opacity: 1,
     x: 0,
   },
-
   exit: {
     opacity: 0,
     x: "100%",
@@ -34,45 +32,56 @@ const pageTransition = {
 /* FALLBACK                                                                    */
 /* -------------------------------------------------------------------------- */
 
-const fallbackGallery = [];
+const fallbackSections = [];
 
 /* -------------------------------------------------------------------------- */
-/* CORPORATE GALLERY                                                           */
+/* COMPANY ARCHIVES                                                            */
 /* -------------------------------------------------------------------------- */
 
 const CompanyArchives = () => {
-  const [artworks, setArtworks] = useState(fallbackGallery);
+  const [sections, setSections] = useState(fallbackSections);
+  const [activeSectionId, setActiveSectionId] = useState("");
   const [loading, setLoading] = useState(true);
   const [selectedIndex, setSelectedIndex] = useState(null);
   const [touchStartX, setTouchStartX] = useState(null);
-  const [isImageLoaded, setIsImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
+  const masonryGridRef = useRef(null);
 
   /* ------------------------------------------------------------------------ */
-  /* FETCH GALLERY                                                             */
+  /* FETCH ARCHIVE SECTIONS                                                    */
   /* ------------------------------------------------------------------------ */
 
   useEffect(() => {
     let mounted = true;
 
-    const fetchGallery = async () => {
+    const fetchArchives = async () => {
       try {
-        const result = await apiRequest("/api/gallery/company-archives");
+        const result = await apiRequest("/api/company-archives");
 
-        const images = Array.isArray(result?.images)
-          ? result.images
-          : Array.isArray(result?.gallery)
-            ? result.gallery
-            : [];
+        const archiveSections = Array.isArray(result?.sections)
+          ? result.sections
+          : [];
 
         if (mounted) {
-          setArtworks(images);
+          setSections(archiveSections);
+
+          setActiveSectionId((current) => {
+            if (
+              current &&
+              archiveSections.some((section) => section._id === current)
+            ) {
+              return current;
+            }
+
+            return archiveSections[0]?._id || "";
+          });
         }
       } catch (error) {
         console.error("Failed to load company archives:", error);
 
         if (mounted) {
-          setArtworks(fallbackGallery);
+          setSections(fallbackSections);
+          setActiveSectionId("");
         }
       } finally {
         if (mounted) {
@@ -81,7 +90,7 @@ const CompanyArchives = () => {
       }
     };
 
-    fetchGallery();
+    fetchArchives();
 
     return () => {
       mounted = false;
@@ -89,11 +98,23 @@ const CompanyArchives = () => {
   }, []);
 
   /* ------------------------------------------------------------------------ */
+  /* ACTIVE SECTION                                                            */
+  /* ------------------------------------------------------------------------ */
+
+  const activeSection = useMemo(() => {
+    return sections.find((section) => section._id === activeSectionId) || null;
+  }, [sections, activeSectionId]);
+
+  /* ------------------------------------------------------------------------ */
   /* NORMALIZE IMAGES                                                          */
   /* ------------------------------------------------------------------------ */
 
   const galleryItems = useMemo(() => {
-    return artworks
+    const images = Array.isArray(activeSection?.images)
+      ? activeSection.images
+      : [];
+
+    return images
       .map((item, index) => {
         const rawImageUrl =
           item?.imageUrl || item?.url || item?.image || item?.src || "";
@@ -111,7 +132,63 @@ const CompanyArchives = () => {
         };
       })
       .filter((item) => item.imageUrl);
-  }, [artworks]);
+  }, [activeSection]);
+
+  /* ------------------------------------------------------------------------ */
+  /* ROW-FIRST MASONRY LAYOUT                                                  */
+  /* ------------------------------------------------------------------------ */
+
+  useEffect(() => {
+    const grid = masonryGridRef.current;
+    if (!grid) return;
+
+    const rowHeight = 8;
+    const rowGap = 16;
+
+    const updateCardSpan = (image) => {
+      const card = image.closest(".masonry-card");
+      if (!card || !image.complete || !image.naturalWidth) return;
+
+      const imageHeight = image.getBoundingClientRect().height;
+      const cardExtraHeight = card.offsetHeight - image.offsetHeight;
+      const totalHeight = imageHeight + cardExtraHeight;
+
+      const rowSpan = Math.ceil((totalHeight + rowGap) / (rowHeight + rowGap));
+
+      card.style.gridRowEnd = `span ${Math.max(1, rowSpan)}`;
+    };
+
+    const images = Array.from(grid.querySelectorAll(".masonry-image"));
+
+    images.forEach((image) => updateCardSpan(image));
+
+    const resizeObserver =
+      typeof ResizeObserver !== "undefined"
+        ? new ResizeObserver((entries) => {
+            entries.forEach((entry) => updateCardSpan(entry.target));
+          })
+        : null;
+
+    images.forEach((image) => {
+      resizeObserver?.observe(image);
+      image.addEventListener("load", () => updateCardSpan(image));
+    });
+
+    return () => {
+      resizeObserver?.disconnect();
+    };
+  }, [galleryItems, loading]);
+
+  /* ------------------------------------------------------------------------ */
+  /* SECTION CHANGE                                                            */
+  /* ------------------------------------------------------------------------ */
+
+  const handleSectionChange = (event) => {
+    setActiveSectionId(event.target.value);
+    setSelectedIndex(null);
+    setTouchStartX(null);
+    setImageError(false);
+  };
 
   /* ------------------------------------------------------------------------ */
   /* LIGHTBOX                                                                  */
@@ -123,10 +200,13 @@ const CompanyArchives = () => {
   const closeLightbox = () => {
     setSelectedIndex(null);
     setTouchStartX(null);
+    setImageError(false);
   };
 
   const showPrevious = () => {
     if (galleryItems.length === 0) return;
+
+    setImageError(false);
 
     setSelectedIndex((current) => {
       if (current === null) return 0;
@@ -138,6 +218,8 @@ const CompanyArchives = () => {
   const showNext = () => {
     if (galleryItems.length === 0) return;
 
+    setImageError(false);
+
     setSelectedIndex((current) => {
       if (current === null) return 0;
 
@@ -145,12 +227,7 @@ const CompanyArchives = () => {
     });
   };
 
-  /* ------------------------------------------------------------------------ */
-  /* LIGHTBOX IMAGE LOADING                                                    */
-  /* ------------------------------------------------------------------------ */
-
   useEffect(() => {
-    setIsImageLoaded(false);
     setImageError(false);
   }, [selectedIndex]);
 
@@ -239,7 +316,7 @@ const CompanyArchives = () => {
         <section
           className="
             relative
-            min-h-[70vh]
+            min-h-[43vh]
             px-6
             pt-24
           "
@@ -267,7 +344,7 @@ const CompanyArchives = () => {
                   to-[#8A5E24]
                   bg-clip-text
                   font-display
-                  text-[clamp(3.8rem,8vw,8.5rem)]
+                  text-[clamp(2.4rem,6vw,6.9rem)]
                   font-medium
                   uppercase
                   leading-[0.9]
@@ -310,62 +387,179 @@ const CompanyArchives = () => {
         </section>
 
         {/* ================================================================ */}
+        {/* ARCHIVE FILTER AND COMPANY HEADER                                 */}
+        {/* ================================================================ */}
+
+        <section className="px-6 pb-12">
+          <div className="mx-auto max-w-7xl">
+            {loading ? (
+              <div className="py-8 text-xs uppercase tracking-[0.3em] text-white/35">
+                Loading archives
+              </div>
+            ) : sections.length > 0 ? (
+              <div className="border-b border-white/10 pb-8">
+                <div className="flex flex-col gap-7 sm:flex-row sm:items-end sm:justify-between">
+                  <div className="w-full max-w-md">
+                    <label
+                      htmlFor="company-archive-filter"
+                      className="
+                        mb-3
+                        block
+                        text-[10px]
+                        uppercase
+                        tracking-[0.3em]
+                        text-white/40
+                      "
+                    >
+                      Select company
+                    </label>
+
+                    <div className="relative w-full min-w-0">
+                      <select
+                        id="company-archive-filter"
+                        value={activeSectionId}
+                        onChange={handleSectionChange}
+                        className="
+                        block
+                        w-full
+                        min-w-0
+                        max-w-full
+                        appearance-none
+                        rounded-md
+                        border
+                        border-[#C9974B]/40
+                        bg-[#111]
+                        py-3
+                        pl-3
+                        pr-10
+                        text-sm
+                        text-white
+                        outline-none
+                        transition-all
+                        duration-300
+                        hover:border-[#C9974B]/70
+                        focus:border-[#C9974B]
+                        focus:ring-1
+                        focus:ring-[#C9974B]/20
+                        sm:px-5
+                        sm:py-4
+                        sm:pr-12
+                        sm:text-base
+                      "
+                      >
+                        {sections.map((section) => (
+                          <option
+                            key={section._id}
+                            value={section._id}
+                            className="bg-[#111] text-white"
+                          >
+                            {section.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  {activeSection && (
+                    <div className="flex flex-wrap items-center gap-5 sm:justify-end">
+                      {activeSection.logo && (
+                        <div className="flex h-16 w-24 items-center justify-center">
+                          <img
+                            src={getOptimizedImageUrl(
+                              getMediaUrl(activeSection.logo),
+                              300,
+                            )}
+                            alt={`${activeSection.name} logo`}
+                            className="max-h-full max-w-full object-contain"
+                          />
+                        </div>
+                      )}
+
+                      <div>
+                        <p className="text-[9px] uppercase tracking-[0.3em] text-white/35">
+                          Selected company
+                        </p>
+
+                        <h2 className="mt-2 font-display text-2xl tracking-tight text-white sm:text-3xl">
+                          {activeSection.name}
+                        </h2>
+
+                        {activeSection.url && (
+                          <a
+                            href={activeSection.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="
+                              mt-3
+                              inline-flex
+                              items-center
+                              gap-2
+                              border
+                              border-[#C9974B]/50
+                              rounded-md
+                              px-4
+                              py-2
+                              text-[10px]
+                              uppercase
+                              tracking-[0.25em]
+                              text-[#C9974B]
+                              transition-colors
+                              hover:border-[#F2D18A]
+                              hover:text-[#F2D18A]
+                            "
+                          >
+                            Visit Site
+                            <ExternalLink size={12} strokeWidth={1.5} />
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="border-y border-white/10 py-8">
+                <p className="text-xs uppercase tracking-[0.3em] text-white/35">
+                  No company archives available
+                </p>
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* ================================================================ */}
         {/* MASONRY GALLERY                                                    */}
         {/* ================================================================ */}
 
         <section className="px-6">
           <div className="mx-auto max-w-7xl">
             {loading ? (
-              <div
-                className="
-                  flex
-                  min-h-[70vh]
-                  items-center
-                  justify-center
-                "
-              >
-                <p
-                  className="
-                    text-xs
-                    uppercase
-                    tracking-[0.3em]
-                    text-white/35
-                  "
-                >
+              <div className="flex min-h-[50vh] items-center justify-center">
+                <p className="text-xs uppercase tracking-[0.3em] text-white/35">
                   Loading
                 </p>
               </div>
             ) : galleryItems.length === 0 ? (
-              <div
-                className="
-                  flex
-                  min-h-[70vh]
-                  items-center
-                  justify-center
-                "
-              >
-                <p
-                  className="
-                    text-xs
-                    uppercase
-                    tracking-[0.3em]
-                    text-white/35
-                  "
-                >
+              <div className="flex min-h-[50vh] items-center justify-center">
+                <p className="text-xs uppercase tracking-[0.3em] text-white/35">
                   No archive images available
                 </p>
               </div>
             ) : (
               <div
+                ref={masonryGridRef}
                 className="
                   mx-auto
+                  grid
                   w-full
                   max-w-6xl
-                  columns-1
+                  grid-cols-1
+                  items-start
                   gap-4
-                  sm:columns-2
-                  lg:columns-3
+                  sm:grid-cols-2
+                  lg:grid-cols-3
                 "
+                style={{ gridAutoRows: "8px" }}
               >
                 {galleryItems.map((item, index) => {
                   const optimizedImageUrl = getOptimizedImageUrl(
@@ -381,8 +575,8 @@ const CompanyArchives = () => {
                       type="button"
                       className="
                         group
+                        masonry-card
                         relative
-                        mb-5
                         block
                         w-full
                         overflow-hidden
@@ -395,7 +589,6 @@ const CompanyArchives = () => {
                         focus:outline-none
                         focus-visible:ring-2
                         focus-visible:ring-[#D9AA55]/80
-                        break-inside-avoid
                       "
                       onClick={() => setSelectedIndex(index)}
                       initial={{
@@ -427,7 +620,8 @@ const CompanyArchives = () => {
                           31vw
                         "
                         alt={
-                          item?.title || `Company archive image ${index + 1}`
+                          item?.title ||
+                          `${activeSection?.name || "Company"} archive image ${index + 1}`
                         }
                         width={1000}
                         height={1250}
@@ -436,6 +630,7 @@ const CompanyArchives = () => {
                         decoding="async"
                         draggable={false}
                         className="
+                          masonry-image
                           block
                           h-auto
                           w-full
@@ -534,34 +729,13 @@ const CompanyArchives = () => {
           <div className="mx-auto max-w-7xl">
             <div className="h-px w-full bg-white/10" />
 
-            <div
-              className="
-                flex
-                items-center
-                justify-between
-                py-8
-              "
-            >
-              <p
-                className="
-                  text-xs
-                  uppercase
-                  tracking-[0.3em]
-                  text-white/35
-                "
-              >
+            <div className="flex items-center justify-between py-8">
+              <p className="text-xs uppercase tracking-[0.3em] text-white/35">
                 End of company archives
               </p>
 
-              <p
-                className="
-                  text-xs
-                  uppercase
-                  tracking-[0.3em]
-                  text-white/25
-                "
-              >
-                {String(galleryItems.length).padStart(2, "0")} Images
+              <p className="text-xs uppercase tracking-[0.3em] text-white/25">
+                {String(galleryItems.length).padStart(2, "0")} Pictures
               </p>
             </div>
           </div>
@@ -693,6 +867,7 @@ const CompanyArchives = () => {
             {/* IMAGE */}
 
             <motion.div
+              key={selectedArtwork.id}
               initial={{
                 opacity: 0,
                 scale: 0.97,
@@ -725,41 +900,24 @@ const CompanyArchives = () => {
               onTouchStart={handleTouchStart}
               onTouchEnd={handleTouchEnd}
             >
-              {!isImageLoaded && !imageError && (
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="h-8 w-8 animate-spin rounded-full border border-white/15 border-t-[#D9AA55]" />
-                </div>
-              )}
-
               {imageError ? (
                 <p className="text-xs uppercase tracking-[0.3em] text-white/40">
                   Unable to load image
                 </p>
               ) : (
                 <img
-                  key={selectedArtwork.id}
                   src={getOptimizedImageUrl(selectedArtwork.imageUrl, 1800)}
                   alt={selectedArtwork?.title || "Company archive image"}
-                  className={`
+                  onError={() => setImageError(true)}
+                  className="
                     max-h-[88vh]
                     max-w-[92vw]
                     select-none
                     object-contain
-                    transition-opacity
-                    duration-300
                     sm:max-h-[88vh]
                     sm:max-w-[88vw]
-                    ${isImageLoaded ? "opacity-100" : "opacity-0"}
-                  `}
+                  "
                   draggable={false}
-                  onLoad={() => {
-                    setIsImageLoaded(true);
-                    setImageError(false);
-                  }}
-                  onError={() => {
-                    setIsImageLoaded(false);
-                    setImageError(true);
-                  }}
                 />
               )}
             </motion.div>

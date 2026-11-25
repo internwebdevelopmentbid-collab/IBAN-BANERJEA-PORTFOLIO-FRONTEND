@@ -282,12 +282,18 @@ function PortfolioSide({
             flex
             items-center
             gap-3
+            border
+            border-white/20
+            rounded-full
+            px-4
+            py-2
             text-[10px]
             uppercase
             tracking-[0.3em]
             text-white/50
             transition-colors
             duration-500
+            group-hover:border-[#C9974B]
             group-hover:text-[#C9974B]
             sm:mt-9
           "

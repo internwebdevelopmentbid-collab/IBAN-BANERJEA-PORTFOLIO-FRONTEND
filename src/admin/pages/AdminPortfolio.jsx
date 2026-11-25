@@ -35,10 +35,17 @@ const EMPTY_IMAGES = {
   corporate: [],
 };
 
+const EMPTY_STATEMENTS = {
+  artist: "",
+  corporate: "",
+};
+
 function AdminPortfolio() {
   const [activeTab, setActiveTab] = useState("artist");
 
   const [images, setImages] = useState(EMPTY_IMAGES);
+
+  const [statements, setStatements] = useState(EMPTY_STATEMENTS);
 
   const [loadedSections, setLoadedSections] = useState({});
 
@@ -47,6 +54,8 @@ function AdminPortfolio() {
   const [uploadingSlot, setUploadingSlot] = useState(null);
 
   const [deletingSlot, setDeletingSlot] = useState(null);
+
+  const [savingStatement, setSavingStatement] = useState(false);
 
   const [notice, setNotice] = useState(null);
 
@@ -77,6 +86,11 @@ function AdminPortfolio() {
           [section]: sectionImages,
         }));
 
+        setStatements((current) => ({
+          ...current,
+          [section]: result?.statement || "",
+        }));
+
         setLoadedSections((current) => ({
           ...current,
           [section]: true,
@@ -84,7 +98,7 @@ function AdminPortfolio() {
       } catch (error) {
         showNotice(
           "error",
-          error?.message || `Failed to load ${section} portfolio images.`,
+          error?.message || `Failed to load ${section} portfolio.`,
         );
       } finally {
         setLoading(false);
@@ -111,6 +125,8 @@ function AdminPortfolio() {
 
   const currentImages = images[activeTab] || [];
 
+  const currentStatement = statements[activeTab] || "";
+
   const getImageForSlot = useCallback(
     (slot) => currentImages.find((image) => image?.slot === slot),
     [currentImages],
@@ -123,6 +139,57 @@ function AdminPortfolio() {
 
     setActiveTab(section);
     setNotice(null);
+  };
+
+  const handleStatementChange = (value) => {
+    setStatements((current) => ({
+      ...current,
+      [activeTab]: value,
+    }));
+  };
+
+  const saveStatement = async () => {
+    const statement = currentStatement.trim();
+
+    if (!statement) {
+      showNotice("error", "Approach statement is required.");
+      return;
+    }
+
+    if (savingStatement) {
+      return;
+    }
+
+    setSavingStatement(true);
+
+    try {
+      const result = await apiRequest(`/api/portfolio/${activeTab}/statement`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          statement,
+        }),
+      });
+
+      setStatements((current) => ({
+        ...current,
+        [activeTab]: result?.statement || statement,
+      }));
+
+      showNotice(
+        "success",
+        result?.message || "Approach statement updated successfully.",
+      );
+    } catch (error) {
+      showNotice(
+        "error",
+        error?.message || "Failed to update approach statement.",
+      );
+    } finally {
+      setSavingStatement(false);
+    }
   };
 
   const uploadImage = async (slot, file) => {
@@ -211,7 +278,8 @@ function AdminPortfolio() {
           </h1>
 
           <p className="mt-4 max-w-xl text-sm leading-6 text-white/35">
-            Manage the fixed portfolio images for Artist and Corporate.
+            Manage the fixed portfolio images and approach text for Artist and
+            Corporate.
           </p>
         </header>
 
@@ -248,6 +316,8 @@ function AdminPortfolio() {
 
         {loading ? (
           <div className="grid gap-5">
+            <div className="h-[220px] animate-pulse border border-white/[0.05] bg-white/[0.015]" />
+
             {SLOTS.map((slot) => (
               <div
                 key={slot.key}
@@ -256,26 +326,104 @@ function AdminPortfolio() {
             ))}
           </div>
         ) : (
-          <div className="grid gap-5">
-            {SLOTS.map((slot) => {
-              const image = getImageForSlot(slot.key);
+          <>
+            {/* APPROACH TEXT */}
 
-              const imageUrl = image?.url
-                ? getOptimizedImageUrl(image.url, 900)
-                : "";
+            <section className="mb-10 border border-white/[0.08] p-5 sm:p-8">
+              <div className="mb-6">
+                <p className="text-[9px] uppercase tracking-[0.4em] text-[#C9974B]">
+                  Portfolio Content
+                </p>
 
-              return (
-                <ImageUploader
-                  key={slot.key}
-                  title={slot.title}
-                  description={slot.description}
-                  imageUrl={imageUrl}
-                  onUpload={(file) => uploadImage(slot.key, file)}
-                  onDelete={image ? () => deleteImage(slot.key) : undefined}
-                />
-              );
-            })}
-          </div>
+                <h2 className="mt-3 font-display text-3xl tracking-tight">
+                  Approach
+                </h2>
+
+                <p className="mt-2 text-sm leading-6 text-white/35">
+                  Manage the approach statement displayed on the{" "}
+                  {activeTab === "artist" ? "Artist" : "Corporate"} portfolio.
+                </p>
+              </div>
+
+              <textarea
+                value={currentStatement}
+                onChange={(event) => handleStatementChange(event.target.value)}
+                maxLength={2000}
+                rows={7}
+                placeholder="Enter the approach statement..."
+                className="
+                  w-full
+                  resize-y
+                  border
+                  border-white/[0.1]
+                  bg-white/[0.02]
+                  px-4
+                  py-4
+                  text-sm
+                  leading-7
+                  text-white/80
+                  outline-none
+                  transition-colors
+                  duration-300
+                  placeholder:text-white/20
+                  focus:border-[#C9974B]/60
+                "
+              />
+
+              <div className="mt-4 flex flex-wrap items-center justify-between gap-4">
+                <span className="text-[10px] tracking-wider text-white/30">
+                  {currentStatement.length} / 2000 characters
+                </span>
+
+                <button
+                  type="button"
+                  onClick={saveStatement}
+                  disabled={savingStatement || !currentStatement.trim()}
+                  className="
+                    border
+                    border-[#C9974B]/50
+                    px-6
+                    py-3
+                    text-[10px]
+                    uppercase
+                    tracking-[0.25em]
+                    text-[#F4D58D]
+                    transition-all
+                    duration-300
+                    hover:border-[#C9974B]
+                    hover:bg-[#C9974B]/10
+                    disabled:cursor-not-allowed
+                    disabled:opacity-30
+                  "
+                >
+                  {savingStatement ? "Saving..." : "Save Approach"}
+                </button>
+              </div>
+            </section>
+
+            {/* PORTFOLIO IMAGES */}
+
+            <div className="grid gap-5">
+              {SLOTS.map((slot) => {
+                const image = getImageForSlot(slot.key);
+
+                const imageUrl = image?.url
+                  ? getOptimizedImageUrl(image.url, 900)
+                  : "";
+
+                return (
+                  <ImageUploader
+                    key={slot.key}
+                    title={slot.title}
+                    description={slot.description}
+                    imageUrl={imageUrl}
+                    onUpload={(file) => uploadImage(slot.key, file)}
+                    onDelete={image ? () => deleteImage(slot.key) : undefined}
+                  />
+                );
+              })}
+            </div>
+          </>
         )}
       </div>
     </AdminLayout>

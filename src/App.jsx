@@ -63,8 +63,6 @@ function PublicLayout({ children }) {
 function HomeLayout() {
   return (
     <div className="relative min-h-screen w-full overflow-x-clip bg-black text-white">
-      <Navbar overlay />
-
       <main className="relative w-full">
         <Home />
       </main>

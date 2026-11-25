@@ -10,15 +10,18 @@ import { apiRequest, getMediaUrl, getOptimizedImageUrl } from "../config/api";
 
 const pageVariants = {
   initial: {
-    x: "100%",
+    opacity: 0,
+    x: "-100%",
   },
 
   animate: {
+    opacity: 1,
     x: 0,
   },
 
   exit: {
-    x: "-100%",
+    opacity: 0,
+    x: "100%",
   },
 };
 
@@ -79,7 +82,6 @@ function ArtistGallery() {
   const [loading, setLoading] = useState(true);
   const [selectedIndex, setSelectedIndex] = useState(null);
   const [touchStartX, setTouchStartX] = useState(null);
-  const [isImageLoaded, setIsImageLoaded] = useState(false);
 
   /* ------------------------------------------------------------------------ */
   /* FETCH GALLERY                                                             */
@@ -178,14 +180,6 @@ function ArtistGallery() {
   };
 
   /* ------------------------------------------------------------------------ */
-  /* LIGHTBOX IMAGE LOADING                                                    */
-  /* ------------------------------------------------------------------------ */
-
-  useEffect(() => {
-    setIsImageLoaded(false);
-  }, [selectedIndex]);
-
-  /* ------------------------------------------------------------------------ */
   /* KEYBOARD                                                                  */
   /* ------------------------------------------------------------------------ */
 
@@ -249,7 +243,7 @@ function ArtistGallery() {
   /* ------------------------------------------------------------------------ */
 
   return (
-    <motion.main
+    <motion.div
       variants={pageVariants}
       initial="initial"
       animate="animate"
@@ -257,7 +251,7 @@ function ArtistGallery() {
       transition={pageTransition}
       className="
         relative
-        overflow-visible
+        w-full
         bg-transparent
         text-white
       "
@@ -269,7 +263,7 @@ function ArtistGallery() {
       <Section
         className="
           relative
-          min-h-[70vh]
+          min-h-[43vh]
           px-6
           pt-24
         "
@@ -297,7 +291,7 @@ function ArtistGallery() {
                 to-[#8A5E24]
                 bg-clip-text
                 font-display
-                text-[clamp(3.8rem,8vw,8.5rem)]
+                text-[clamp(2.4rem,6vw,6.9rem)]
                 font-medium
                 uppercase
                 leading-[0.9]
@@ -592,7 +586,7 @@ function ArtistGallery() {
                 text-white/25
               "
             >
-              {String(galleryItems.length).padStart(2, "0")} Works
+              {String(galleryItems.length).padStart(2, "0")} Pictures
             </p>
           </div>
         </div>
@@ -747,28 +741,18 @@ function ArtistGallery() {
               onTouchStart={handleTouchStart}
               onTouchEnd={handleTouchEnd}
             >
-              {!isImageLoaded && (
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="h-8 w-8 animate-spin rounded-full border border-white/15 border-t-[#D9AA55]" />
-                </div>
-              )}
-
               <img
                 src={getOptimizedImageUrl(selectedArtwork.imageUrl, 1800)}
-                alt=""
-                className={`
+                alt={selectedArtwork?.title || "Artist artwork"}
+                className="
                   max-h-[88vh]
                   max-w-[92vw]
                   select-none
                   object-contain
-                  transition-opacity
-                  duration-300
                   sm:max-h-[88vh]
                   sm:max-w-[88vw]
-                  ${isImageLoaded ? "opacity-100" : "opacity-0"}
-                `}
+                "
                 draggable={false}
-                onLoad={() => setIsImageLoaded(true)}
               />
             </motion.div>
 
@@ -791,7 +775,7 @@ function ArtistGallery() {
           </motion.div>
         )}
       </AnimatePresence>
-    </motion.main>
+    </motion.div>
   );
 }
 

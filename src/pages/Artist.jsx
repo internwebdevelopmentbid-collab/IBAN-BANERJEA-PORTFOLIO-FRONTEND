@@ -1,11 +1,13 @@
 import { motion, useReducedMotion } from "framer-motion";
 import { Link } from "react-router-dom";
+import { createPortal } from "react-dom";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { apiRequest, getMediaUrl, getOptimizedImageUrl } from "../config/api";
 
 const ARTIST_API = "/api/portfolio/artist";
 const ARTIST_GALLERY_API = "/api/gallery/artist";
+const WORKS_API = "/api/works";
 
 const initialData = {
   hero: {
@@ -230,6 +232,8 @@ function Artist() {
   const [isMobile, setIsMobile] = useState(false);
   const [data, setData] = useState(initialData);
   const [portfolioLoading, setPortfolioLoading] = useState(true);
+  const [lightboxImage, setLightboxImage] = useState(null);
+  const [works, setWorks] = useState([]);
 
   const galleryRef = useRef(null);
 
@@ -257,6 +261,26 @@ function Artist() {
   }, []);
 
   const disableMotion = isMobile || reducedMotion;
+
+  useEffect(() => {
+    if (!lightboxImage) return;
+
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") {
+        setLightboxImage(null);
+      }
+    };
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [lightboxImage]);
 
   /* =======================================================
      LOAD PORTFOLIO
@@ -500,6 +524,34 @@ function Artist() {
   };
 
   /* =======================================================
+   LOAD WORKS
+  ======================================================= */
+
+  useEffect(() => {
+    let mounted = true;
+
+    const loadWorks = async () => {
+      try {
+        const result = await apiRequest(WORKS_API);
+
+        if (!mounted) {
+          return;
+        }
+
+        setWorks(Array.isArray(result?.works) ? result.works : []);
+      } catch (error) {
+        console.error("Failed to load artist works:", error);
+      }
+    };
+
+    loadWorks();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  /* =======================================================
      RENDER
   ======================================================= */
 
@@ -624,21 +676,28 @@ function Artist() {
             "
           >
             {data.hero.image && (
-              <OptimizedImage
-                src={data.hero.image}
-                alt="Artist portfolio"
-                width={800}
-                height={1000}
-                sizes="
-                  (max-width: 767px) calc(100vw - 48px),
-                  (max-width: 1023px) 70vw,
-                  55vw
-                "
-                loading="eager"
-                fetchPriority="high"
-                mobile={isMobile}
-                hover={!disableMotion}
-              />
+              <button
+                type="button"
+                onClick={() => setLightboxImage(getMediaUrl(data.hero.image))}
+                aria-label="View hero image"
+                className="block h-full w-full cursor-pointer border-0 bg-transparent p-0 text-left"
+              >
+                <OptimizedImage
+                  src={data.hero.image}
+                  alt="Artist portfolio"
+                  width={800}
+                  height={1000}
+                  sizes="
+                    (max-width: 767px) calc(100vw - 48px),
+                    (max-width: 1023px) 70vw,
+                    55vw
+                  "
+                  loading="eager"
+                  fetchPriority="high"
+                  mobile={isMobile}
+                  hover={!disableMotion}
+                />
+              </button>
             )}
           </div>
         </div>
@@ -678,9 +737,8 @@ function Artist() {
               w-full
               max-w-none
               font-display
-              text-[clamp(1.8rem,3.2vw,3.4rem)]
-              leading-[1.15]
-              tracking-[-0.035em]
+              text-[clamp(1.5rem,2.7vw,2.8rem)]
+              leading-[1.5]
               text-white/85
             "
           >
@@ -698,9 +756,9 @@ function Artist() {
         className="
           relative
           px-6
-          py-28
+          py-14
           lg:px-10
-          lg:py-36
+          lg:py-18
         "
       >
         <div className="mx-auto max-w-7xl">
@@ -791,12 +849,22 @@ function Artist() {
         disableAnimation={disableMotion}
         className="
           px-6
-          py-24
+          py-14
           lg:px-10
-          lg:py-36
+          lg:py-18
         "
       >
         <div className="mx-auto max-w-7xl">
+          <p
+            className="
+                text-[10px]
+                uppercase
+                tracking-[0.35em]
+                text-[#C9974B]
+              "
+          >
+            Artist
+          </p>
           <div
             className="
               grid
@@ -811,9 +879,8 @@ function Artist() {
                 mt-8
                 max-w-2xl
                 font-display
-                text-[clamp(1.8rem,3.5vw,4rem)]
+                text-[clamp(1.5rem,2.7vw,3.4rem)]
                 leading-[1.1]
-                tracking-[-0.04em]
                 text-white/80
               "
             >
@@ -826,19 +893,30 @@ function Artist() {
                 overflow-hidden
               "
             >
-              <OptimizedImage
-                src={data.aboutTwo.image}
-                alt="Artist project"
-                width={800}
-                height={500}
-                sizes="
-                  (max-width: 767px) calc(100vw - 48px),
-                  45vw
-                "
-                loading="lazy"
-                mobile={isMobile}
-                hover={!disableMotion}
-              />
+              {data.aboutTwo.image && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    setLightboxImage(getMediaUrl(data.aboutTwo.image))
+                  }
+                  aria-label="View About section image"
+                  className="block h-full w-full cursor-pointer border-0 bg-transparent p-0 text-left"
+                >
+                  <OptimizedImage
+                    src={data.aboutTwo.image}
+                    alt="Artist project"
+                    width={800}
+                    height={500}
+                    sizes="
+                      (max-width: 767px) calc(100vw - 48px),
+                      45vw
+                    "
+                    loading="lazy"
+                    mobile={isMobile}
+                    hover={!disableMotion}
+                  />
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -1214,9 +1292,9 @@ function Artist() {
           border-t
           border-white/10
           px-6
-          py-24
+          py-12
           lg:px-10
-          lg:py-36
+          lg:py-18
         "
       >
         <div className="mx-auto max-w-7xl">
@@ -1246,10 +1324,7 @@ function Artist() {
           </div>
 
           <div className="grid grid-cols-1 gap-8 lg:grid-cols-2 lg:gap-10">
-            {[
-              { id: "moPT6hsnU0c", title: "Artist work 1" },
-              { id: "rTfFzlJciww", title: "Artist work 2" },
-            ].map((video) => (
+            {works.map((video) => (
               <div
                 key={video.id}
                 className="
@@ -1263,7 +1338,7 @@ function Artist() {
               >
                 <div className="aspect-video w-full">
                   <iframe
-                    src={`https://www.youtube-nocookie.com/embed/${video.id}`}
+                    src={`https://www.youtube-nocookie.com/embed/${video.videoId}`}
                     title={video.title}
                     className="h-full w-full"
                     loading="lazy"
@@ -1288,9 +1363,9 @@ function Artist() {
           border-t
           border-white/10
           px-6
-          py-24
+          py-12
           lg:px-10
-          lg:py-32
+          lg:py-16
         "
       >
         <div
@@ -1479,6 +1554,73 @@ function Artist() {
           </div>
         </div>
       </Section>
+
+      {/* IMAGE LIGHTBOX */}
+      {lightboxImage &&
+        createPortal(
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Image preview"
+            onClick={() => setLightboxImage(null)}
+            className="
+              fixed
+              inset-0
+              z-[99999]
+              flex
+              items-center
+              justify-center
+              bg-black/95
+              p-4
+              backdrop-blur-md
+              sm:p-8
+            "
+          >
+            {/* CLOSE BUTTON */}
+            <button
+              type="button"
+              onClick={() => setLightboxImage(null)}
+              aria-label="Close image preview"
+              className="
+                absolute
+                right-5
+                top-5
+                z-10
+                flex
+                h-11
+                w-11
+                items-center
+                justify-center
+                rounded-full
+                border
+                border-white/20
+                bg-white/10
+                text-3xl
+                text-white
+                transition
+                hover:border-[#C9974B]
+                hover:bg-white/20
+              "
+            >
+              &times;
+            </button>
+
+            {/* FULL-SIZE IMAGE */}
+            <img
+              src={lightboxImage}
+              alt="Expanded artist portfolio image"
+              onClick={(event) => event.stopPropagation()}
+              className="
+                max-h-[90vh]
+                max-w-[95vw]
+                rounded-sm
+                object-contain
+                shadow-2xl
+              "
+            />
+          </div>,
+          document.body,
+        )}
     </motion.main>
   );
 }

@@ -45,7 +45,6 @@ const CorporateGallery = () => {
   const [loading, setLoading] = useState(true);
   const [selectedIndex, setSelectedIndex] = useState(null);
   const [touchStartX, setTouchStartX] = useState(null);
-  const [isImageLoaded, setIsImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
 
   /* ------------------------------------------------------------------------ */
@@ -146,15 +145,6 @@ const CorporateGallery = () => {
   };
 
   /* ------------------------------------------------------------------------ */
-  /* LIGHTBOX IMAGE LOADING                                                    */
-  /* ------------------------------------------------------------------------ */
-
-  useEffect(() => {
-    setIsImageLoaded(false);
-    setImageError(false);
-  }, [selectedIndex]);
-
-  /* ------------------------------------------------------------------------ */
   /* KEYBOARD NAVIGATION                                                       */
   /* ------------------------------------------------------------------------ */
 
@@ -239,7 +229,7 @@ const CorporateGallery = () => {
         <section
           className="
             relative
-            min-h-[70vh]
+            min-h-[43vh]
             px-6
             pt-24
           "
@@ -267,7 +257,7 @@ const CorporateGallery = () => {
                   to-[#8A5E24]
                   bg-clip-text
                   font-display
-                  text-[clamp(3.8rem,8vw,8.5rem)]
+                  text-[clamp(2.4rem,6vw,6.9rem)]
                   font-medium
                   uppercase
                   leading-[0.9]
@@ -558,7 +548,7 @@ const CorporateGallery = () => {
                   text-white/25
                 "
               >
-                {String(galleryItems.length).padStart(2, "0")} Works
+                {String(galleryItems.length).padStart(2, "0")} Pictures
               </p>
             </div>
           </div>
@@ -722,41 +712,23 @@ const CorporateGallery = () => {
               onTouchStart={handleTouchStart}
               onTouchEnd={handleTouchEnd}
             >
-              {!isImageLoaded && !imageError && (
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="h-8 w-8 animate-spin rounded-full border border-white/15 border-t-[#D9AA55]" />
-                </div>
-              )}
-
               {imageError ? (
                 <p className="text-xs uppercase tracking-[0.3em] text-white/40">
                   Unable to load image
                 </p>
               ) : (
                 <img
-                  key={selectedArtwork.id}
                   src={getOptimizedImageUrl(selectedArtwork.imageUrl, 1800)}
-                  alt={selectedArtwork?.title || "Corporate artwork"}
-                  className={`
-                    max-h-[88vh]
-                    max-w-[92vw]
-                    select-none
-                    object-contain
-                    transition-opacity
-                    duration-300
-                    sm:max-h-[88vh]
-                    sm:max-w-[88vw]
-                    ${isImageLoaded ? "opacity-100" : "opacity-0"}
-                  `}
+                  alt={selectedArtwork?.title || "Artist artwork"}
+                  className="
+                  max-h-[88vh]
+                  max-w-[92vw]
+                  select-none
+                  object-contain
+                  sm:max-h-[88vh]
+                  sm:max-w-[88vw]
+                "
                   draggable={false}
-                  onLoad={() => {
-                    setIsImageLoaded(true);
-                    setImageError(false);
-                  }}
-                  onError={() => {
-                    setIsImageLoaded(false);
-                    setImageError(true);
-                  }}
                 />
               )}
             </motion.div>

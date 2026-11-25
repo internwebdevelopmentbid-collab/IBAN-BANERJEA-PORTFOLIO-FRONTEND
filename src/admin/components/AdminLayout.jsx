@@ -19,6 +19,10 @@ const navigation = [
     label: "Gallery",
     path: "/admin/gallery",
   },
+  {
+    label: "Content",
+    path: "/admin/content",
+  },
 ];
 
 function MenuIcon() {

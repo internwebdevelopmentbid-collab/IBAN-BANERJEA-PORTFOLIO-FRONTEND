@@ -13,8 +13,8 @@ const footerStagger = {
 
   visible: {
     transition: {
-      delayChildren: 0.12,
-      staggerChildren: 0.08,
+      delayChildren: 0.1,
+      staggerChildren: 0.07,
     },
   },
 };
@@ -22,14 +22,14 @@ const footerStagger = {
 const footerItem = {
   hidden: {
     opacity: 0,
-    y: 22,
+    y: 18,
   },
 
   visible: {
     opacity: 1,
     y: 0,
     transition: {
-      duration: 0.65,
+      duration: 0.58,
       ease: [0.22, 1, 0.36, 1],
     },
   },
@@ -226,7 +226,7 @@ const Footer = () => {
 
   const progress = useSpring(scrollYProgress, {
     stiffness: 90,
-    damping: 26,
+    damping: 28,
     mass: 0.7,
   });
 
